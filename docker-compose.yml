@@ -1,220 +1,161 @@
 version: '3.4'
 
 services:
-  sql.data:
-    image: microsoft/mssql-server-linux:2017-latest
 
-  nosql.data:
+  seq:
+    image: datalust/seq:latest
+
+  sqldata:
+    image: mcr.microsoft.com/mssql/server:2019-latest 
+
+  nosqldata:
     image: mongo
 
-  basket.data:
+  basketdata:
     image: redis:alpine
-      
+
   rabbitmq:
     image: rabbitmq:3-management-alpine
 
-  identity.api:
-    image: eshop/identity.api:${TAG:-latest}
+  identity-api:
+    image: ${REGISTRY:-eshop}/identity.api:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Services/Identity/Identity.API/Dockerfile    
+      dockerfile: Services/Identity/Identity.API/Dockerfile
     depends_on:
-      - sql.data
+      - sqldata
 
-  basket.api:
-    image: eshop/basket.api:${TAG:-latest}
+  basket-api:
+    image: ${REGISTRY:-eshop}/basket.api:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Services/Basket/Basket.API/Dockerfile    
+      dockerfile: Services/Basket/Basket.API/Dockerfile
     depends_on:
-      - basket.data
-      - identity.api
+      - basketdata
+      - identity-api
       - rabbitmq
 
-  catalog.api:
-    image: eshop/catalog.api:${TAG:-latest}
+  catalog-api:
+    image: ${REGISTRY:-eshop}/catalog.api:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Services/Catalog/Catalog.API/Dockerfile
+      dockerfile: Services/Catalog/Catalog.API/Dockerfile
     depends_on:
-      - sql.data
+      - sqldata
       - rabbitmq
 
-  ordering.api:
-    image: eshop/ordering.api:${TAG:-latest}
+  ordering-api:
+    image: ${REGISTRY:-eshop}/ordering.api:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Services/Ordering/Ordering.API/Dockerfile    
+      dockerfile: Services/Ordering/Ordering.API/Dockerfile
     depends_on:
-      - sql.data
+      - sqldata
       - rabbitmq
 
-  ordering.backgroundtasks:
-    image: eshop/ordering.backgroundtasks:${TAG:-latest}
+  ordering-backgroundtasks:
+    image: ${REGISTRY:-eshop}/ordering.backgroundtasks:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Services/Ordering/Ordering.BackgroundTasks/Dockerfile    
+      dockerfile: Services/Ordering/Ordering.BackgroundTasks/Dockerfile
     depends_on:
-      - sql.data
+      - sqldata
       - rabbitmq
 
-  marketing.api:
-    image: eshop/marketing.api:${TAG:-latest}
+  payment-api:
+    image: ${REGISTRY:-eshop}/payment.api:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Services/Marketing/Marketing.API/Dockerfile    
+      dockerfile: Services/Payment/Payment.API/Dockerfile
     depends_on:
-      - sql.data
-      - nosql.data
-      - identity.api
       - rabbitmq
 
-  payment.api:
-    image: eshop/payment.api:${TAG:-latest}
+  webhooks-api:
+    image: ${REGISTRY:-eshop}/webhooks.api:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Services/Payment/Payment.API/Dockerfile
+      dockerfile: Services/Webhooks/Webhooks.API/Dockerfile
     depends_on:
-      - rabbitmq    
-    
-  locations.api:
-    image: eshop/locations.api:${TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/Services/Location/Locations.API/Dockerfile
-    depends_on:
-      - nosql.data
-      - rabbitmq
+      - sqldata
 
   mobileshoppingapigw:
-    image: eshop/ocelotapigw:${TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/ApiGateways/ApiGw-Base/Dockerfile
-    depends_on:
-      - nosql.data
-      - sql.data
-      - identity.api
-      - rabbitmq
-      - ordering.api
-      - marketing.api
-      - catalog.api
-      - basket.api
- 
-  mobilemarketingapigw:
-    image: eshop/ocelotapigw:${TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/ApiGateways/ApiGw-Base/Dockerfile
-    depends_on:
-      - nosql.data
-      - sql.data
-      - identity.api
-      - rabbitmq
-      - ordering.api
-      - marketing.api
-      - catalog.api
-      - basket.api
- 
-  webshoppingapigw:
-    image: eshop/ocelotapigw:${TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/ApiGateways/ApiGw-Base/Dockerfile
-    depends_on:
-      - nosql.data
-      - sql.data
-      - identity.api
-      - rabbitmq
-      - ordering.api
-      - marketing.api
-      - catalog.api
-      - basket.api
-
-  webmarketingapigw:
-    image: eshop/ocelotapigw:${TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/ApiGateways/ApiGw-Base/Dockerfile
-    depends_on:
-      - nosql.data
-      - sql.data
-      - identity.api
-      - rabbitmq
-      - ordering.api
-      - marketing.api
-      - catalog.api
-      - basket.api
+    image: envoyproxy/envoy:v1.11.1
 
   mobileshoppingagg:
-    image: eshop/mobileshoppingagg:${TAG:-latest}
+    image: ${REGISTRY:-eshop}/mobileshoppingagg:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/ApiGateways/Mobile.Bff.Shopping/aggregator/Dockerfile
+      dockerfile: ApiGateways/Mobile.Bff.Shopping/aggregator/Dockerfile
     depends_on:
-      - nosql.data
-      - sql.data
-      - identity.api
+      - nosqldata
+      - sqldata
+      - identity-api
       - rabbitmq
-      - ordering.api
-      - marketing.api
-      - catalog.api
-      - basket.api
+      - ordering-api
+      - catalog-api
+      - basket-api
 
   webshoppingagg:
-    image: eshop/webshoppingagg:${TAG:-latest}
+    image: ${REGISTRY:-eshop}/webshoppingagg:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/ApiGateways/Web.Bff.Shopping/aggregator/Dockerfile
+      dockerfile: ApiGateways/Web.Bff.Shopping/aggregator/Dockerfile
     depends_on:
-      - nosql.data
-      - sql.data
-      - identity.api
+      - nosqldata
+      - sqldata
+      - identity-api
       - rabbitmq
-      - ordering.api
-      - marketing.api
-      - catalog.api
-      - basket.api
+      - ordering-api
+      - catalog-api
+      - basket-api
 
-  ordering.signalrhub:
-    image: eshop/ordering.signalrhub:${TAG:-latest}
+  ordering-signalrhub:
+    image: ${REGISTRY:-eshop}/ordering.signalrhub:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Services/Ordering/Ordering.SignalrHub/Dockerfile
+      dockerfile: Services/Ordering/Ordering.SignalrHub/Dockerfile
     depends_on:
-      - nosql.data
-      - sql.data
-      - identity.api
+      - nosqldata
+      - sqldata
+      - identity-api
       - rabbitmq
-      - ordering.api
-      - marketing.api
-      - catalog.api
-      - basket.api
+      - ordering-api
+      - catalog-api
+      - basket-api
 
   webstatus:
-    image: eshop/webstatus:${TAG:-latest}
+    image: ${REGISTRY:-eshop}/webstatus:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Web/WebStatus/Dockerfile
+      dockerfile: Web/WebStatus/Dockerfile
 
   webspa:
-    image: eshop/webspa:${TAG:-latest}
+    image: ${REGISTRY:-eshop}/webspa:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: src/Web/WebSPA/Dockerfile    
-#    depends_on:
-#      - webshoppingagg
-#      - webshoppingapigw
-#      - webmarketingapigw
-
-
-  webmvc:
-    image: eshop/webmvc:${TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/Web/WebMVC/Dockerfile    
+      dockerfile: Web/WebSPA/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:12.0}
     depends_on:
       - webshoppingagg
       - webshoppingapigw
-      - webmarketingapigw
 
+  webmvc:
+    image: ${REGISTRY:-eshop}/webmvc:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: Web/WebMVC/Dockerfile
+    depends_on:
+      - webshoppingagg
+      - webshoppingapigw
+
+  webhooks-client:
+    image: ${REGISTRY:-eshop}/webhooks.client:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: Web/WebhookClient/Dockerfile
+    depends_on:
+      - webhooks-api
+
+  webshoppingapigw:
+    image: envoyproxy/envoy:v1.11.1
