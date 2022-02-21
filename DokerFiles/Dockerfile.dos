@@ -1,0 +1,17 @@
+FROM  openjdk:8
+
+USER root
+
+ENV TZ=America/Mexico_City
+COPY /security/* $JAVA_HOME/lib/security/
+RUN cd $JAVA_HOME/lib/security & ls -ltr $JAVA_HOME/lib/security/
+RUN keytool -importcert -noprompt -trustcacerts -alias brms_dev -file $JAVA_HOME/lib/security/ca-chain_Azteca_cert.pem -storepass changeit01 -keystore $JAVA_HOME/lib/security/cacerts
+RUN keytool -importcert -noprompt -trustcacerts -alias brms -file $JAVA_HOME/lib/security/CERT_BRMS_PROD.cer -storepass changeit01 -keystore $JAVA_HOME/lib/security/cacerts
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "-Dfile.encoding=utf-8", "-Dsun.jnu.encoding=utf-8", "-Doracle.jdbc.fanEnabled=false", "-Dspring.profiles.active=${ENVIRONMENT}", "app.jar", "--server.port=8080"]
